@@ -101,6 +101,7 @@ engine switches to demo mode and talks to no API.
 | Module | Lines | What it is |
 | --- | ---: | --- |
 | `audio/sfx.js` | 75 | Sounds, synthesized in the browser. |
+| `brand.js` | 29 | This computer's own brand pack, when there is one (public/assets/brand-local/, never in git; read by src/brand/server.ts, handed to the page in <script id="brand-local">): the 3D lobby sign, the reception plaque and its stripe take it. |
 | `core/env.js` | 73 | Page-wide basics: DOM helpers, the floor plan choice, replay clock, office clock, season, formatting. |
 | `core/loop.js` | 235 | The render loop and its frame budget. |
 | `core/optimize.js` | 141 | Merging static meshes into fewer draw calls, then starting. |
@@ -166,7 +167,7 @@ engine switches to demo mode and talks to no API.
 | `scene/lights.js` | 35 | Sun, sky light and the room lamps (per-room night lighting on the company floor). |
 | `scene/quality.js` | 77 | Graphics quality: Auto (the default), Low, Medium or High, each viewer's own choice (Settings → Display). |
 | `scene/renderer.js` | 91 | Renderer, cameras, orbit controls, post-processing and environment light. |
-| `ui/activity.js` | 301 | The activity column and the session list. |
+| `ui/activity.js` | 304 | The activity column and the session list. |
 | `ui/burn.js` | 212 | What eats your plan: where Claude Code's usage goes, by model, MCP server, skill, plugin, subagent, project and session. |
 | `ui/cache-words.js` | 53 | How a session's prompt cache reads on screen ("Đồng hồ bộ nhớ đệm", src/shared/cache-clock.js; the cups on the desks are world/props/cups.js): the line under the session drawer's folder, the one under the chat's "Gửi tới" and in its list of conversations, list mode's cards, and the switch in Settings → More for the "about to go cold" notification. |
 | `ui/camera-bar.js` | 58 | The camera toolbar. |
@@ -243,7 +244,7 @@ engine switches to demo mode and talks to no API.
 | `world/furniture/room-pieces.js` | 107 | Wall clock, framed art, bookshelf, sofa corner and the globe. |
 | `world/furniture/server-racks.js` | 65 | Server racks with LEDs and fans that follow the Mac's CPU. |
 | `world/layout.js` | 43 | The floor plans (cozy, pro, hq): where the shared furniture stands, and the headquarters wing. |
-| `world/pro/floor.js` | 347 | The company floor: rooms, partitions and furniture. |
+| `world/pro/floor.js` | 352 | The company floor: rooms, partitions and furniture. |
 | `world/pro/pieces.js` | 142 | Company floor building pieces: floor finishes, walls, glass, chairs, dining sets. |
 | `world/pro/wing.js` | 134 | Headquarters' wing: in front of the company floor, a corridor along it, a corridor down the middle and four department rooms of two pods each (the desks, pods' screens and carpets come from the shared code). |
 | `world/props/aquarium.js` | 44 | The aquarium. |

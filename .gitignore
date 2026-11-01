@@ -20,3 +20,6 @@ playwright-report/
 /.demo-build/
 /demo-site/
 /out/
+
+# this computer's own brand pack (logo, fonts with their own licences): never published
+public/assets/brand-local/

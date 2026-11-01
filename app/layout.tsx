@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import Script from 'next/script';
 import { getLang, getT } from '@/i18n/server';
+import { localBrand } from '@/brand/server';
 // One stylesheet per area of the screen, in cascade order (later files override earlier ones).
 import '@/styles/fonts.css';
 import '@/styles/base.css';
@@ -42,7 +43,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const at = (sub: string) => `${SITE}${ROOT}${sub}`, url = at(lang === 'en' ? '/' : `/${lang}/`);
   return {
     ...(SITE && { metadataBase: new URL(SITE) }),
-    title: { absolute: 'My Office' }, description, applicationName: 'My Office',
+    title: { absolute: localBrand()?.name ? `${localBrand()!.name} · My Office` : 'My Office' }, description, applicationName: 'My Office',
     // (on an iPhone's home screen: full screen, its own name; the manifest is app/manifest.ts)
     appleWebApp: { capable: true, title: 'My Office', statusBarStyle: 'black-translucent' }, formatDetection: { telephone: false },
     keywords: ['Claude Code', 'AI agents', '3D office', 'developer tools', 'văn phòng 3D', 'Claude Code dashboard'],
@@ -55,10 +56,14 @@ export async function generateMetadata(): Promise<Metadata> {
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#0E131B' };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
+  const brand = localBrand();
   return (
     // data-os: the machine's platform, for the words "Mac" / "PC" / "computer" (the online demo is a pretend Mac)
-    <html lang={await getLang()} data-os={process.env.OFFICE_STATIC === '1' ? 'darwin' : process.platform}>
+    <html lang={await getLang()} data-os={process.env.OFFICE_STATIC === '1' ? 'darwin' : process.platform} data-brand={brand ? '1' : undefined}>
+      {/* this computer's own brand pack (src/brand/server.ts): its stylesheet after ours, its settings for the 3D signs */}
+      <head>{brand?.css && <link rel="stylesheet" href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/brand-local/brand.css`} />}</head>
       <body>
+        {brand && <script id="brand-local" type="application/json" dangerouslySetInnerHTML={{ __html: JSON.stringify(brand).replace(/</g, '\\u003c') }} />}
         {children}
         {/* QR codes for "open on your phone" (qrcode.js, MIT), kept local so the office works offline */}
         <Script src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/assets/vendor/qrcode.min.js`} strategy="afterInteractive" />

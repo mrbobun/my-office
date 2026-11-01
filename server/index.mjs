@@ -42,6 +42,7 @@ import { pickLang, createT } from '../src/i18n/index.js';
 import { createLiftService } from './lift-service.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+process.env.OFFICE_ROOT ||= ROOT;   // (the page's server code finds public/assets/brand-local/ from here: src/brand/server.ts)
 const PORT = Number(process.env.OFFICE_PORT) || 4310;
 // Fork local-an-toan: only this Mac. Wi-Fi (LAN) and the Cloudflare tunnel stay shut unless OFFICE_OPEN=1 is set
 // on purpose; without it OFFICE_HOST is ignored and the server only ever listens on 127.0.0.1.
@@ -2733,7 +2734,6 @@ async function cloudflared() {
   if (onPath) return onPath;
   // fork local-an-toan: no unchecked download of a binary; install cloudflared yourself (brew) if you really want it
   throw new Error('cloudflared chưa cài (bản local-an-toan không tự tải chương trình về)');
-  // eslint-disable-next-line no-unreachable
   const arch = process.arch === 'arm64' ? 'arm64' : 'amd64';
   const asset = { darwin: `cloudflared-darwin-${arch}.tgz`, linux: `cloudflared-linux-${arch}`, win32: 'cloudflared-windows-amd64.exe' }[process.platform];
   if (!asset) throw new Error(tr('server.tunnel.noPlatform'));

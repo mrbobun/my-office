@@ -13,6 +13,7 @@ import { unseenDone } from '../life/your-turn.js';
 import { whereabouts } from '../people/outings.js';
 import { imageUrl, openImage } from './image-view.js';
 import { t as tr, num } from '../../i18n/index.js';
+import { brand } from '../brand.js';
 
 let feedFilter = 'all';
 let query = '';
@@ -242,7 +243,9 @@ export function renderHud() {
   }));
   $('bell-dot').hidden = !waiting;
   const yours = waiting + unseenDone.size;
-  document.title = yours ? tr('activity.docTitle', { n: yours }) : 'My Office';
+  // (with a brand pack of this computer's own, its name first: src/office/brand.js)
+  const name = brand?.name ? `${brand.name} · My Office` : 'My Office';
+  document.title = yours ? tr('activity.docTitle', { n: yours }).replace('My Office', name) : name;
 }
 export function updateMarkers(t) {
   const sel = state.selectedId ? workers.get(state.selectedId) : null;

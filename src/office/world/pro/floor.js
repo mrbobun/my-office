@@ -10,6 +10,7 @@ import { DZ, STAIR } from '../entrance.js';
 import { PODS, officeChair } from '../desks.js';
 import { nightHooks, trinket } from '../props/trinkets.js';
 import { OFFICE_MARK, PRO_FX, armchair, backPanel, chairUph, diningSet, floorZone, glassWall, gridTex, leftPanel, lowWall, plankTex, plateTex, speckTex } from './pieces.js';
+import { brandSign, drawBrandSign } from '../../brand.js';
 import { t as tr } from '../../../i18n/index.js';
 
 function buildProFloor() {
@@ -204,7 +205,9 @@ function buildProFloor() {
     const lm = new THREE.MeshBasicMaterial({ map: logo }); PRO_FX.logoM = lm;
     put(scene, rbox(0.06, 0.62, 2.7, '#1C2620', 0.02), -7.96, 3.6, DZ);
     put(scene, new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.56), lm), -7.92, 3.6, DZ).rotation.y = Math.PI / 2;
-    nightHooks.push((on) => lm.color.setScalar(on ? 1.7 : 1)); }
+    nightHooks.push((on) => lm.color.setScalar(on ? 1.7 : 1));
+    // this computer's brand pack (src/office/brand.js): its logo on the sign and on the reception's plaque (same texture)
+    brandSign().then((b) => { if (!b) return; const c = logo.image; drawBrandSign(c.getContext('2d'), c.width, c.height, b); logo.needsUpdate = true; }); }
   /* the reception: a U of walnut with a stone ledge for visitors (the My Office plaque on its front), a lower desk
      behind it where the receptionist sits (people/staff.js) with her screen, keyboard and phone, a low cabinet against
      the glass behind her. Across the lobby from the lift, which keeps an open space in front of it. Visitors stand at
@@ -212,7 +215,9 @@ function buildProFloor() {
   { const rc = new THREE.Group(); rc.position.set(-4.9, 0, 1.5); scene.add(rc);
     const walnut = mat('#7A5640', { roughness: 0.5 }), stone = mat('#F2EEE8', { roughness: 0.3 }), oak = mat('#E3DACB', { roughness: 0.55 });
     put(rc, rbox(2.1, 1.02, 0.1, walnut, 0.03), 0, 0.51, 0.48);                                     // front
-    put(rc, rbox(2.12, 0.06, 0.12, '#D97757', 0.01), 0, 0.86, 0.49);                                 // the brand stripe
+    { const stripe = put(rc, rbox(2.12, 0.06, 0.12, '#D97757', 0.01), 0, 0.86, 0.49);                 // the brand stripe
+      stripe.userData.noMerge = true;   // (kept apart so a brand pack can colour it once its settings are in)
+      brandSign().then((b) => { if (b?.stripe) stripe.material = mat(b.stripe, { roughness: 0.5 }); }); }
     for (const x of [-0.6, 0.6]) put(rc, rbox(0.02, 0.92, 0.02, '#5E412F', 0.005), x, 0.47, 0.535);  // panel grooves
     put(rc, new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.215), PRO_FX.logoM), 0, 0.58, 0.535);      // plaque
     put(rc, rbox(0.1, 1.02, 0.95, walnut, 0.03), 1.0, 0.51, 0.05);                                   // east end
