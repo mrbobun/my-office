@@ -7,7 +7,6 @@
 // even at the lowest resolution step, it goes down one level and remembers that for this device. A remembered level is
 // tried one step higher again after three days, so a busy afternoon does not cap the office for good.
 import * as THREE from 'three';
-import { small } from '../core/env.js';
 import { SOFTWARE_GL, camera, composer, renderer, scene } from './renderer.js';
 import { sun } from './lights.js';
 
@@ -29,7 +28,8 @@ export const phoneLike = () => (phone ??= matchMedia('(pointer: coarse)').matche
 function autoStart() {
   if (SOFTWARE_GL) return 'low';
   let saved = null; try { saved = JSON.parse(store.get(AUTO_KEY) || 'null'); } catch { /* old value */ }
-  const base = phoneLike() ? 'low' : small.matches || matchMedia('(pointer: coarse)').matches ? 'medium' : 'high';
+  // fork local-an-toan: Auto starts (and stays) at Low to spare the Mac; pick Medium or High in Settings → Display
+  const base = 'low';
   if (!saved || !LEVELS.includes(saved.level)) return base;
   if (Date.now() - (saved.at || 0) > RETRY_MS) return LEVELS[Math.min(LEVELS.indexOf(saved.level) + 1, LEVELS.indexOf(base))];
   return saved.level;

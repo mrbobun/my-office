@@ -16,7 +16,7 @@ function home() {
   fs.mkdirSync(path.dirname(settings), { recursive: true });
   const env = { PATH: process.env.PATH, HOME: path.join(root, 'home'), USERPROFILE: path.join(root, 'home'), OFFICE_DATA_DIR: path.join(root, 'data'), OFFICE_LANG: 'en',
     OFFICE_MANAGED_DIR: path.join(root, 'managed'), OFFICE_PORT: '4399' };
-  const run = (...args) => execFileSync(process.execPath, [CLI, ...args, '--no-status', '--settings', settings], { env, encoding: 'utf8' });
+  const run = (...args) => execFileSync(process.execPath, [CLI, ...args, '--no-status', ...(args.includes('--no-otel') ? [] : ['--otel']), '--settings', settings], { env, encoding: 'utf8' });
   const read = () => JSON.parse(fs.readFileSync(settings, 'utf8'));
   const write = (o) => fs.writeFileSync(settings, JSON.stringify(o, null, 2));
   return { root, settings, run, read, write, env, done: () => fs.rmSync(root, { recursive: true, force: true }) };

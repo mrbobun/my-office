@@ -48,16 +48,6 @@
         ]
       },
       {
-        "matcher": "AskUserQuestion|ExitPlanMode",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "curl -s --max-time 50 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:4310/hook/question || true",
-            "timeout": 55
-          }
-        ]
-      },
-      {
         "hooks": [
           {
             "type": "command",
@@ -99,15 +89,6 @@
             "command": "curl -s -m 2 -o /dev/null -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:4310/event || true",
             "timeout": 5,
             "async": true
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "curl -s --max-time 50 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:4310/hook/permission || true",
-            "timeout": 55
           }
         ]
       }

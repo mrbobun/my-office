@@ -43,8 +43,11 @@ import { createLiftService } from './lift-service.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.OFFICE_PORT) || 4310;
-// Only this Mac by default; `my-office start --lan` (or OFFICE_HOST=0.0.0.0) opens it to the home wifi.
-const HOST = process.env.OFFICE_HOST || '127.0.0.1';
+// Fork local-an-toan: only this Mac. Wi-Fi (LAN) and the Cloudflare tunnel stay shut unless OFFICE_OPEN=1 is set
+// on purpose; without it OFFICE_HOST is ignored and the server only ever listens on 127.0.0.1.
+const OPEN = process.env.OFFICE_OPEN === '1';
+const HOST = OPEN ? process.env.OFFICE_HOST || '127.0.0.1' : '127.0.0.1';
+if (!OPEN && process.env.OFFICE_HOST && process.env.OFFICE_HOST !== '127.0.0.1') console.warn('[my-office] local-an-toan: OFFICE_HOST ignored (set OFFICE_OPEN=1 to allow Wi-Fi)');
 const HOME = os.homedir();
 // Claude Code's own config folder (CLAUDE_CONFIG_DIR moves it, as it does for Claude Code).
 const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(HOME, '.claude');
@@ -129,9 +132,9 @@ function bashLabel(i) {
 }
 
 // When the office speaks Vietnamese, English descriptions (written by Claude) become Vietnamese via Google's free
-// translate endpoint, cached on disk. OFFICE_TRANSLATE=0 keeps everything local.
+// translate endpoint, cached on disk. Fork local-an-toan: only with OFFICE_TRANSLATE=1.
 const VI_CHARS = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
-const TRANSLATE = process.env.OFFICE_TRANSLATE !== '0';
+const TRANSLATE = process.env.OFFICE_TRANSLATE === '1';   // fork local-an-toan: off unless asked for
 const VI_FILE = path.join(DATA_DIR, 'vi-cache.json');
 let viCache = {};
 try { viCache = JSON.parse(fs.readFileSync(VI_FILE, 'utf8')); } catch { /* first run */ }
@@ -2253,6 +2256,7 @@ const server = http.createServer((req, res) => {
     const sameOrigin = sameOriginOf(req);
     if (!isLoopback(req) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
     readJson(req).then((b) => {
+      if (url.pathname === '/api/lan' && b?.on && !OPEN) { json(res, 200, { ok: false, message: 'Bản local-an-toan: chỉ mở trên Mac này (OFFICE_OPEN=1 để cho phép wifi).' }); return; }
       if (url.pathname === '/api/pin') {   // { pin } of your own, or a random one; every phone signed out (the cookie's signature covers the PIN), open pages cut off now
         const own = b?.pin == null ? '' : String(b.pin).replace(/\s/g, '');
         if (own && pinWeak(own)) { json(res, 200, { ok: false, message: tr('server.pin.weak') }); return; }   // (turned down, not an error: the page shows why)
@@ -2369,6 +2373,7 @@ const server = http.createServer((req, res) => {
     if (!isLoopback(req) || !sameOrigin || (req.method === 'POST' && !String(req.headers['content-type'] || '').startsWith('application/json'))) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
     if (req.method === 'GET') { Promise.race([bgRun.probe(findClaude()).catch(() => null), new Promise((r) => setTimeout(r, 4000))]).then(() => json(res, 200, tunnelOut())); return; }   // (whether this Claude Code has background sessions: looked at once)
     readJson(req).then((b) => {
+      if (b?.on && !OPEN) { prefs.set('tunnel', undefined); json(res, 200, { ...tunnelOut(), ok: false, error: 'Bản local-an-toan: không mở ra internet (OFFICE_OPEN=1 để cho phép).' }); return; }
       prefs.set('tunnel', b?.on ? true : undefined);
       fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} tunnel ${b?.on ? 'on' : 'off'}\n`).catch(() => {});
       if (b?.on) startTunnel(); else stopTunnel();
@@ -2670,7 +2675,7 @@ catch (err) {
 const lanFixed = HOST !== '127.0.0.1' && HOST !== 'localhost';
 const lanServers = new Map();   // address -> its http.Server
 function syncLan() {
-  const want = new Set(!lanFixed && prefs.get('lan') ? Object.values(os.networkInterfaces()).flat().filter((n) => n && n.family === 'IPv4' && !n.internal).map((n) => n.address) : []);
+  const want = new Set(OPEN && !lanFixed && prefs.get('lan') ? Object.values(os.networkInterfaces()).flat().filter((n) => n && n.family === 'IPv4' && !n.internal).map((n) => n.address) : []);
   for (const [addr, srv] of lanServers) if (!want.has(addr)) { srv.close(); srv.closeAllConnections?.(); lanServers.delete(addr); }
   for (const addr of want) {
     if (lanServers.has(addr)) continue;
@@ -2726,6 +2731,9 @@ async function cloudflared() {
   if (fs.existsSync(CF_BIN)) return CF_BIN;
   const onPath = await new Promise((resolve) => execFile(process.platform === 'win32' ? 'where' : 'which', ['cloudflared'], { timeout: 4000 }, (err, out) => resolve(err ? '' : String(out).split('\n')[0].trim())));
   if (onPath) return onPath;
+  // fork local-an-toan: no unchecked download of a binary; install cloudflared yourself (brew) if you really want it
+  throw new Error('cloudflared chưa cài (bản local-an-toan không tự tải chương trình về)');
+  // eslint-disable-next-line no-unreachable
   const arch = process.arch === 'arm64' ? 'arm64' : 'amd64';
   const asset = { darwin: `cloudflared-darwin-${arch}.tgz`, linux: `cloudflared-linux-${arch}`, win32: 'cloudflared-windows-amd64.exe' }[process.platform];
   if (!asset) throw new Error(tr('server.tunnel.noPlatform'));
@@ -2777,6 +2785,7 @@ function tunnelUp(pid, url) {
   tunnel.watch.unref();
 }
 async function startTunnel() {
+  if (!OPEN) { prefs.set('tunnel', undefined); tunnel.state = 'off'; return; }   // fork local-an-toan
   if (tunnel.pid || tunnel.state === 'download' || tunnel.state === 'starting') return;
   keepAwake(true);
   const gen = ++tunnel.gen;

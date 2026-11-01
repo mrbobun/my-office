@@ -46,7 +46,13 @@ const STATUS_CMD = WIN ? `"${fwd(process.execPath)}" "${fwd(STATUS_SCRIPT)}"` : 
 const oursStatus = (s) => typeof s?.command === 'string' && s.command.includes('status-line.mjs') && (s.command.includes(ROOT) || s.command.includes(fwd(ROOT)));
 const ours = (h) => typeof h?.command === 'string' && h.command.includes(`127.0.0.1:${PORT}/`);
 // --lan opens the server to the home wifi so a phone can watch (QR code or PIN). Off by default.
-const LAN = args.includes('--lan');
+// fork local-an-toan: --lan only with OFFICE_OPEN=1. Approving from the office (--approve), the status line (--status)
+// and Claude Code's telemetry to the office (--otel) are opt-in: by default install adds only the hooks that report events.
+const LAN = args.includes('--lan') && process.env.OFFICE_OPEN === '1';
+if (args.includes('--lan') && !LAN) console.log('  ⚠ local-an-toan: --lan ignored (OFFICE_OPEN=1 to allow Wi-Fi)');
+const WANT_APPROVE = args.includes('--approve') && !args.includes('--no-approve');
+const WANT_STATUS = args.includes('--status') && !args.includes('--no-status');
+const WANT_OTEL = args.includes('--otel') && !args.includes('--no-otel');
 const service = () => serviceFor({ root: ROOT, server: path.join(ROOT, 'server', 'index.mjs'), log: path.join(ROOT, 'data', 'server.log'), host: LAN ? '0.0.0.0' : '127.0.0.1', port: PORT });
 const ok = (s) => console.log(`  ✓ ${s}`), warn = (s) => console.log(`  ⚠ ${s}`), bad = (s) => console.log(`  ✗ ${s}`);
 
@@ -74,18 +80,18 @@ async function install() {
     if (!list.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/event')))) { list.push({ hooks: [{ type: 'command', command: EVENT_CMD, timeout: 5, async: true }] }); added++; }
   }
   const perm = (cfg.hooks.PermissionRequest ||= []);
-  if (!args.includes('--no-approve') && !perm.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/permission')))) { perm.push({ hooks: [{ type: 'command', command: PERM_CMD, timeout: 55 }] }); added++; }
+  if (WANT_APPROVE && !perm.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/permission')))) { perm.push({ hooks: [{ type: 'command', command: PERM_CMD, timeout: 55 }] }); added++; }
   const pre = (cfg.hooks.PreToolUse ||= []);
-  if (!args.includes('--no-approve') && !pre.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/question')))) { pre.push({ matcher: ASK_MATCHER, hooks: [{ type: 'command', command: ASK_CMD, timeout: 55 }] }); added++; }
+  if (WANT_APPROVE && !pre.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/question')))) { pre.push({ matcher: ASK_MATCHER, hooks: [{ type: 'command', command: ASK_CMD, timeout: 55 }] }); added++; }
   if (!args.includes('--no-loop-guard') && !pre.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/loop')))) { pre.push({ hooks: [{ type: 'command', command: LOOP_CMD, timeout: 2 }] }); added++; }
-  if (!args.includes('--no-status') && !oursStatus(cfg.statusLine)) {
+  if (WANT_STATUS && !oursStatus(cfg.statusLine)) {
     if (cfg.statusLine?.command) { await fsp.mkdir(path.dirname(STATUS_PREV), { recursive: true }); await fsp.writeFile(STATUS_PREV, JSON.stringify(cfg.statusLine)); ok(tr('cli.install.statusKept')); }
     cfg.statusLine = { type: 'command', command: STATUS_CMD, ...(cfg.statusLine?.padding != null ? { padding: cfg.statusLine.padding } : {}) };
     added++;
   }
   // "What eats the plan": Claude Code's own telemetry, to this office only, unless you already send it somewhere
   let otel = { added: 0, theirs: null };
-  if (!args.includes('--no-otel')) otel = addOtel(cfg, PORT, { names: !args.includes('--no-otel-names'), shell: process.env, managed: managedEnvs(), file: SETTINGS });
+  if (WANT_OTEL) otel = addOtel(cfg, PORT, { names: !args.includes('--no-otel-names'), shell: process.env, managed: managedEnvs(), file: SETTINGS });
   if (added || otel.added) { await writeSettings(cfg); if (added) ok(tr('cli.install.added', { n: added, file: SETTINGS })); } else ok(tr('cli.install.already'));
   if (otel.added) ok(tr('cli.install.otel', { file: SETTINGS }));
   if (otel.theirs) { warn(tr('cli.install.otelTheirs', { where: otel.theirs.join('; ') })); console.log(`\n${collectorSnippet(PORT).replace(/^/gm, '    ')}\n`); }
